@@ -58,3 +58,10 @@ class NoParamsAction(BaseModel):
 		# If you want to silently allow unknown fields at top-level,
 		# set extra = 'allow' as well:
 		extra = 'allow'
+
+
+class DragAction(BaseModel):
+	source_index: int  # Index of element to drag
+	target_position_x: int  # Grid position to drop the item
+	target_position_y: int  # Grid position to drop the item
+	source_xpath: Optional[str] = None  # Optional source element xpath

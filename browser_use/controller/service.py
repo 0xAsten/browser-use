@@ -21,12 +21,14 @@ from browser_use.controller.views import (
 	SearchGoogleAction,
 	SendKeysAction,
 	SwitchTabAction,
+	DragAction,
 )
 from browser_use.utils import time_execution_async, time_execution_sync
 
 logger = logging.getLogger(__name__)
 from langchain_core.language_models.chat_models import BaseChatModel
 
+CELL_SIZE = 64  # Cell size in pixels as defined in the frontend
 
 class Controller:
 	def __init__(
@@ -432,6 +434,56 @@ class Controller:
 				msg = f'Selection failed: {str(e)}'
 				logger.error(msg)
 				return ActionResult(error=msg, include_in_memory=True)
+
+		@self.registry.action(
+			'Drag an element to a specific grid position',
+			param_model=DragAction,
+			requires_browser=True,
+		)
+		async def drag_element(params: DragAction, browser: BrowserContext):
+			session = await browser.get_session()
+			state = session.cached_state
+
+			if params.source_index not in state.selector_map:
+				raise Exception(f'Element with index {params.source_index} does not exist - retry or use alternative actions')
+
+			element_node = state.selector_map[params.source_index]
+			page = await browser.get_current_page()
+			
+			try:
+				# Get the source element
+				xpath = params.source_xpath if params.source_xpath else element_node.xpath
+				source = page.locator(f"xpath={xpath}")
+				
+				# Get the grid container element
+				grid_container = page.locator("div.grid-cells").first
+				grid_box = await grid_container.bounding_box()
+				if not grid_box:
+					raise Exception("Could not find grid container")
+				
+				# Calculate target position based on grid coordinates
+				# Add padding (4px) adjustments
+				padding = 4  # Grid container padding
+				
+				target_x = grid_box["x"] + padding + (params.target_position_x * CELL_SIZE) + (CELL_SIZE / 2)
+				# Y position needs to be calculated from the bottom since the grid's Y coordinates start from bottom
+				target_y = grid_box["y"] + padding + (params.target_position_y * CELL_SIZE) + (CELL_SIZE / 2)
+				
+				# Perform the drag operation
+				await source.hover()  # Move mouse to element
+				await page.mouse.down()  # Click and hold
+				await page.mouse.move(target_x, target_y, steps=20)  # Move to target position with smoother animation
+				await page.wait_for_timeout(100)  # Small pause before release
+				await page.mouse.up()  # Release
+				
+				msg = f'🖱️  Dragged element {params.source_index} to grid position ({params.target_position_x}, {params.target_position_y})'
+				logger.info(msg)
+				return ActionResult(extracted_content=msg, include_in_memory=True)
+				
+			except Exception as e:
+				msg = f'Failed to drag element: {str(e)}'
+				logger.error(msg)
+				return ActionResult(error=msg)
 
 	def action(self, description: str, **kwargs):
 		"""Decorator for registering custom actions
