@@ -473,7 +473,26 @@ class Controller:
 				# Perform the drag operation
 				await source.hover()
 				await page.mouse.down()
+
+				source_box = await source.bounding_box()
+				if not source_box:
+					raise Exception("Could not get source bounding box")
+				start_x = source_box["x"] + source_box["width"] / 2
+				start_y = source_box["y"] + source_box["height"] / 2
+
+				end_x = grid_box["x"] + target_x
+				end_y = grid_box["y"] + grid_box["height"] - target_y
+
 				await page.mouse.move(grid_box["x"] + target_x, grid_box["y"] + grid_box["height"] - target_y)
+
+				# Move mouse in steps to simulate natural movement
+				steps = 10
+				for i in range(1, steps + 1):
+					await page.mouse.move(
+						start_x + (end_x - start_x) * (i / steps),
+						start_y + (end_y - start_y) * (i / steps),
+					)
+					await asyncio.sleep(0.2) 
 
 				shift_presses = (params.rotation_angle // 90) if params.rotation_angle else 0
 

@@ -26,7 +26,7 @@ import asyncio
 
 # from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
-# from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from browser_use import Agent, Controller
 from browser_use.browser.browser import Browser, BrowserConfig
 from browser_use.browser.context import BrowserContext
@@ -110,6 +110,7 @@ async def main():
 # '''
 
 	task = '''
+Switch to page localhost:3000(Grid Equipment Game) playing a grid-based inventory management game.
 Grid System:
 	1.	The grid consists of 9 columns and 7 rows, forming a 9x7 layout.
 	2.	The grid coordinates start from the bottom-left corner (0, 0) and extend to (8, 6).
@@ -136,11 +137,12 @@ Item Placement Rules:
 
 Shop System:
 	1.	The shop offers up to 4 items at a time, with an option to reroll for a gold cost.
-	2.	Each item has:
+	2.  Please reroll fist if there is no items revealed in the shop.
+	3.	Each item has:
 		•	A gold price
 		•	Stat bonuses (Attack, Defense, Health)
 		•	Dimensions (width x height) that impact grid space usage
-	3.	Special synergies may apply when combining items.
+	4.	Special synergies may apply when combining items.
 
 Gold and Resource Management:
 	1.	Balance between purchasing items and rerolling for better options.
@@ -163,21 +165,29 @@ Turn Objectives:
 	2.	Optimize the use of grid space.
 	3.	Use gold efficiently, deciding whether to:
 		•	Buy and place shop items.
-		•	Reroll for better inventory.
+		•	Reroll for small pouch to get more available space to place other items.
 		•	Reorganize or discard existing items.
+
+Remember:
+	1. Don't scroll down or up the game page.
+	2. Don't click the reset button which will re-start the game.
+	3. Try to spend all the gold.
 
 Decision Guidelines:
 	1.	Always check whether the grid has enough valid space on top of existing Small Pouches before suggesting item placements.
 	2.	If there is insufficient space for placement, suggest rerolling the shop to find additional Small Pouches.
 	3.	If multiple valid placements are possible:
 		•	Prioritize configurations that minimize empty space and preserve room for future items.
-		•	Consider item rotations (0°, 90°, 180°, 270°) for optimal grid utilization.	'''
+		•	Consider item rotations (0°, 90°, 180°, 270°) for optimal grid utilization.	
+		•   if horizontally set the rotation_angle to 90.
+'''
 
 	if not api_key:
 		raise ValueError('OPENAI_API_KEY is not set')
 	# llm = ChatAnthropic(model_name='claude-3-5-sonnet-20240620', timeout=25, stop=None, temperature=0.5)
 	# anthropic/claude-3.5-sonnet openai/gpt-4o-2024-11-20
 	llm =ChatOpenAI(base_url='https://openrouter.ai/api/v1', model='anthropic/claude-3.5-sonnet', api_key=SecretStr(api_key))
+	# llm = ChatOpenAI(base_url='https://openrouter.ai/api/v1', model='deepseek/deepseek-chat', api_key=SecretStr(api_key))
 	# llm = ChatGoogleGenerativeAI(model='gemini-2.0-flash', api_key=SecretStr(api_key))
 
 	agent = Agent(
